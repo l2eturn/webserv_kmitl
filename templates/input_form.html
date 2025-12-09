@@ -1,0 +1,213 @@
+{% extends "layout.html" %}
+
+{% block title %}กรอกข้อมูล{% endblock %}
+
+{% block content %}
+
+<style>
+    /* การ์ดหลัก - ใช้สไตล์ Modern จาก layout */
+    .modern-card {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        overflow: hidden;
+        background: white;
+    }
+
+    /* Header - ใช้สไตล์เดิมที่สวยงาม */
+    .card-header-custom {
+        background: linear-gradient(135deg, #1e505cff 0%, #6096a0ff 100%); /* สีฟ้าอมเทาธีมหลัก */
+        color: white;
+        padding: 20px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* ตาราง - เน้นความเรียบง่ายตามภาพตัวอย่าง */
+    .table-custom th {
+        background-color: #f8f9fa;
+        color: #495057;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .table-custom td {
+        vertical-align: middle;
+        border-color: #f0f0f0;
+        padding: 12px 15px;
+    }
+    
+    .criteria-label {
+        font-weight: 700;
+        color: #0d47a1;
+        display: block;
+        font-size: 0.95rem; /* ทำให้ตัวอักษรใหญ่ขึ้น */
+    }
+    
+    .criteria-sub-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    /* ช่องกรอกข้อมูล + หน่วย */
+    .input-wrapper {
+        display: flex;
+        align-items: center;
+        /* ใช้ padding เล็กน้อยเพื่อให้ช่อง input สวยงาม */
+    }
+    .form-control-custom {
+        border: 1px solid #dee2e6;
+        border-radius: 8px 0 0 8px; /* มุมโค้งเฉพาะด้านซ้าย */
+        text-align: center;
+        padding: 8px;
+        transition: all 0.2s;
+        font-weight: 500;
+        flex-grow: 1;
+    }
+    .form-control-custom:focus {
+        border-color: #198754;
+        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15);
+        background-color: #fff;
+    }
+    .unit-display {
+        background-color: #f8f9fa; /* สีพื้นหลังเดียวกับหัวตาราง */
+        border: 1px solid #dee2e6;
+        border-left: none;
+        border-radius: 0 8px 8px 0; /* มุมโค้งเฉพาะด้านขวา */
+        padding: 8px 10px;
+        font-size: 0.8rem;
+        color: #6c757d;
+        font-weight: 500;
+        white-space: nowrap;
+        height: 40px; /* ทำให้สูงเท่า input */
+        line-height: 1.5; /* จัดให้อยู่ตรงกลางแนวตั้ง */
+    }
+
+    /* ปุ่ม */
+    .btn-action {
+        border-radius: 50px;
+        padding: 10px 30px;
+        font-weight: 600;
+        transition: 0.3s;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    .btn-calculate {
+        background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+        border: none;
+        color: white;
+    }
+    .btn-calculate:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(25, 135, 84, 0.3);
+        color: white;
+    }
+
+    .btn-test-data {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: white;
+        backdrop-filter: blur(5px);
+    }
+    .btn-test-data:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+    }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="modern-card">
+            
+            <div class="card-header-custom">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-pencil-square fs-4 me-2"></i>
+                    <h4 class="mb-0 fw-bold">กรอกข้อมูลการขนส่ง</h4>
+                </div>
+                <button type="button" class="btn btn-sm btn-test-data" onclick="fillTestCase()">
+                    <i class="bi bi-magic me-1"></i> เติมข้อมูลทดสอบ
+                </button>
+            </div>
+
+            <div class="card-body p-0">
+                <form action="/calculate" method="POST" id="topsisForm">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 table-custom">
+                            <thead style="position: sticky; top: 0; z-index: 10;">
+                                <tr>
+                                    <th class="ps-4" style="width: 30%;">เกณฑ์ (Criteria)</th>
+                                    <th class="text-center text-primary" style="width: 20%;"><i class="bi bi-airplane-fill me-1"></i> Air</th>
+                                    <th class="text-center text-info" style="width: 20%;"><i class="bi bi-tsunami me-1"></i> Sea</th>
+                                    <th class="text-center text-success" style="width: 20%;"><i class="bi bi-truck me-1"></i> Road</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in criteria %}
+                                {% set unit = units.get(c, '-') %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <span class="criteria-label">{{ c }}</span>
+                                        <span class="criteria-sub-label">{{ names.get(c, '-') }}</span>
+                                    </td>
+                                    {% for mode in ["Air", "Sea", "Road"] %}
+                                    <td>
+                                        <div class="input-wrapper">
+                                            <input type="number" step="0.01" class="form-control form-control-custom" name="{{ mode }}_{{ c }}" id="{{ mode }}_{{ c }}" placeholder="0.00" required>
+                                            <span class="unit-display">({{ unit }})</span>
+                                        </div>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="p-4 bg-light text-end border-top">
+                        <a href="{{ url_for('project_select') }}" class="btn btn-outline-secondary me-2 rounded-pill px-4">ยกเลิก</a>
+                        <button type="reset" class="btn btn-outline-danger me-2 rounded-pill px-4">ล้างค่า</button>
+                        <button type="submit" class="btn btn-action btn-calculate">
+                            <i class="bi bi-calculator-fill me-2"></i> คำนวณผลลัพธ์
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fillTestCase() {
+    // ข้อมูลทดสอบ (Test Case)
+    const testData = {
+        "Air": 	[500, 600, 500, 600, 800, 900, 1200, 50, 900, 900, 900, 8000, 120, 120, 900, 5000, 5000],
+        "Sea": 	[600, 900, 600, 1200, 900, 600, 5000, 90, 600, 600, 600, 12000, 300, 300, 800, 8000, 8000],
+        "Road": [800, 1200, 700, 1000, 1000, 800, 8000, 80, 700, 700, 700, 9000, 150, 150, 700, 6000, 6000]
+    };
+
+    // ลำดับ Criteria (Sub-Criteria ทั้งหมด)
+    const criteria = ["s11", "s12", "s13", "s21", "s22", "s23", "s24", "s31", "s32", "s33", "s34", "s41", "s42", "s43", "s51", "s52", "s53"];
+
+    // วนลูปเติมค่า
+    ["Air", "Sea", "Road"].forEach(mode => {
+        criteria.forEach((c, index) => {
+            const inputId = `${mode}_${c}`;
+            const element = document.getElementById(inputId);
+            if(element) {
+                element.value = testData[mode][index];
+                // เพิ่ม Effect สีเขียวเล็กน้อยเพื่อบอกว่าถูกเติมแล้ว
+                element.style.backgroundColor = "#e8f5e9";
+                setTimeout(() => element.style.backgroundColor = "", 1000);
+            }
+        });
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,465 @@
+{% extends "layout.html" %}
+
+{% block title %}สร้างโปรเจกต์ใหม่ (F-BWM){% endblock %}
+
+{% block content %}
+
+<style>
+    /* ... (CSS Styles remain the same) ... */
+    :root {
+        --primary-gradient: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+        --secondary-gradient: linear-gradient(135deg, #198754 0%, #20c997 100%);
+    }
+    .modern-card {
+        background: white; border: none; border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 30px;
+    }
+    .form-control { font-weight: 500; font-size: 0.9rem; }
+    .form-control::placeholder { color: #cecece !important; opacity: 1; }
+    .input-modern {
+        border: 1px solid #e0e0e0; 
+        border-radius: 8px; 
+        text-align: center; 
+        transition: all 0.2s;
+        background-color: #f2f2f2; 
+    }
+    .input-modern:focus { 
+        background-color: #ffffff;
+        border-color: #198754; 
+        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15); 
+    }
+    .table-danger td { background-color: #fff2f2 !important; }
+    .table-danger .input-modern { border-color: #dc3545; background-color: #fff; }
+    .nav-pills {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 15px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        border: 1px solid #eee;
+    }
+    .nav-pills .nav-link {
+        background-color: #ffffff !important; 
+        color: #444444 !important; 
+        border: 1px solid #ced4da !important; 
+        font-weight: 700;
+        border-radius: 10px;
+        padding: 10px 20px;
+        transition: all 0.2s ease-in-out;
+        display: flex;
+        align-items: center;
+        font-size: 0.95rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .nav-pills .nav-link:hover { 
+        background-color: #e9ecef !important; 
+        transform: translateY(-2px);
+        border-color: #adb5bd !important;
+    }
+    .nav-pills .nav-link.active {
+        background: var(--secondary-gradient) !important;
+        color: white !important;
+        border-color: transparent !important;
+        box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3) !important;
+    }
+    .tab-status {
+        font-size: 0.7em;
+        padding: 3px 8px;
+        border-radius: 6px;
+        margin-left: 8px;
+        font-weight: normal;
+    }
+    .nav-link .tab-status {
+        background: #e9ecef; 
+        color: #666;
+    }
+    .nav-link.active .tab-status {
+        background: rgba(255,255,255,0.25);
+        color: white;
+    }
+    .st-pass { background: #d1e7dd !important; color: #0f5132 !important; }
+    .st-fail { background: #f8d7da !important; color: #842029 !important; }
+    .validation-box {
+        border-radius: 12px; padding: 15px; text-align: center;
+        background-color: #fff3cd; border: 1px solid #ffecb5;
+        color: #664d03; font-weight: 500; margin-bottom: 20px;
+    }
+    .validation-box.valid { background-color: #d1e7dd; border-color: #badbcc; color: #0f5132; }
+    .sticky-footer {
+        position: sticky;
+        bottom: 20px;
+        z-index: 100;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(10px);
+        padding: 15px 30px;
+        border-radius: 50px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        border: 1px solid rgba(0,0,0,0.05);
+        margin-top: 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-lg-11">
+        
+        <div class="text-center mb-4 mt-3">
+            <h2 class="fw-bold text-dark">กำหนดค่าน้ำหนัก (F-BWM)</h2>
+            <p class="text-muted">Main & Sub Criteria Evaluation</p>
+        </div>
+
+        <div class="modern-card p-4">
+            <form action="{{ url_for('create_project') }}" method="POST" id="newProjectForm">
+                
+                <div class="row align-items-end mb-4">
+                    <div class="col-md-7">
+                        <label for="project_name" class="form-label fw-bold text-secondary">ชื่อโปรเจกต์ใหม่</label>
+                        <input type="text" class="form-control form-control-lg border-0 bg-light" id="project_name" name="project_name" required value="Project {{ now().strftime('%d-%m-%Y') }}" style="font-weight:bold; color:#333;">
+                    </div>
+                    <div class="col-md-5 text-end">
+                        <button type="button" class="btn btn-outline-danger shadow-sm fw-bold rounded-pill px-3 me-2" onclick="clearAllData()">
+                            <i class="bi bi-trash3-fill me-1"></i> ล้างค่า
+                        </button>
+                        <button type="button" class="btn btn-warning shadow-sm fw-bold text-dark rounded-pill px-3" onclick="fillAllExperts()">
+                            <i class="bi bi-magic me-1"></i> เติมข้อมูลทดสอบ
+                        </button>
+                    </div>
+                </div>
+
+                <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+                    {% for group in structure %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if loop.first %}active{% endif %}" 
+                                id="pills-{{ group.id }}-tab" 
+                                data-bs-toggle="pill" 
+                                data-bs-target="#pills-{{ group.id }}" 
+                                type="button" role="tab"
+                                
+                                title="{{ group.name }}">
+
+                            {{ group.name }}
+                            <span id="icon-group-{{ group.id }}" class="tab-status">Wait</span>
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <div class="tab-content" id="pills-tabContent">
+                    {% for group in structure %}
+                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pills-{{ group.id }}" role="tabpanel">
+                        
+                        {% for eid in ['E1', 'E2', 'E3'] %}
+                        <div class="card mb-4 border-0 shadow-sm" style="background-color: #fdfdfd;">
+                            <div class="card-header bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                        {{ eid }}
+                                    </div>
+                                    <span class="fw-bold text-dark">ผู้เชี่ยวชาญคนที่ {{ loop.index }}</span>
+                                </div>
+                                
+                                <div class="d-flex align-items-center gap-2">
+                                    <div id="result_{{ eid }}_{{ group.id }}" class="fw-bold text-end" style="font-size: 0.9rem;"></div>
+                                    
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" 
+                                            onclick='checkCRI("{{ eid }}", {{ group.members | tojson }}, "{{ group.id }}")'>
+                                        ตรวจสอบ
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-modern table-bordered mb-0" style="table-layout: fixed;">
+                                        <thead>
+                                            <tr>
+                                                <th rowspan="2" width="15%" class="align-middle text-center">Criteria</th>
+                                                <th colspan="3" class="text-center text-primary">Best to Others (BO)</th>
+                                                <th colspan="3" class="text-center text-danger">Others to Worst (OW)</th>
+                                            </tr>
+                                            <tr class="text-center text-muted small">
+                                                <th>l</th><th>m</th><th>u</th>
+                                                <th>l</th><th>m</th><th>u</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for c in group.members %}
+                                            <tr data-criterion="{{ c }}">
+                                                <td class="fw-bold text-center bg-white text-secondary px-2 py-2">
+                                                    <span tabindex="0" 
+                                                          data-bs-toggle="popover" 
+                                                          data-bs-trigger="hover focus" 
+                                                          data-bs-placement="right"
+                                                          
+                                                          title="{{ c }}" 
+                                                          
+                                                          data-bs-content="{{ criteria_names.get(c, 'ไม่พบคำอธิบาย') }}">
+                                                        
+                                                        {{ c }} 
+                                                        <i class="bi bi-info-circle-fill text-info ms-1" style="font-size: 0.8em;"></i>
+                                                    </span>
+                                                </td>
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm input-modern text-center {{ eid }}_BO" name="{{ eid }}_{{ c }}_BO_l" id="{{ eid }}_{{ c }}_BO_l" placeholder="l"></td>
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm input-modern text-center {{ eid }}_BO" name="{{ eid }}_{{ c }}_BO_m" id="{{ eid }}_{{ c }}_BO_m" placeholder="m"></td>
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm input-modern text-center {{ eid }}_BO" name="{{ eid }}_{{ c }}_BO_u" id="{{ eid }}_{{ c }}_BO_u" placeholder="u"></td>
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm input-modern text-center {{ eid }}_OW" name="{{ eid }}_{{ c }}_OW_l" id="{{ eid }}_{{ c }}_OW_l" placeholder="l"></td>
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm input-modern text-center {{ eid }}_OW" name="{{ eid }}_{{ c }}_OW_m" id="{{ eid }}_{{ c }}_OW_m" placeholder="m"></td>
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm input-modern text-center {{ eid }}_OW" name="{{ eid }}_{{ c }}_OW_u" id="{{ eid }}_{{ c }}_OW_u" placeholder="u"></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="sticky-footer">
+                    <div id="validationMessage" class="text-danger fw-bold small">
+                        <i class="bi bi-exclamation-circle-fill me-1"></i> รอการตรวจสอบข้อมูล (0/18)
+                    </div>
+                    <button type="submit" class="btn btn-success btn-lg shadow rounded-pill px-5" id="submitBtn" disabled>
+                        <i class="bi bi-rocket-takeoff-fill me-2"></i> คำนวณผลลัพธ์
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    
+    const groups = ["Main", "C1", "C2", "C3", "C4", "C5"];
+    const experts = ["E1", "E2", "E3"];
+    const checkState = {};
+
+    groups.forEach(g => { experts.forEach(e => { checkState[`${e}_${g}`] = false; }); });
+
+    function updateSubmitButton() {
+        const btn = document.getElementById('submitBtn');
+        const msg = document.getElementById('validationMessage');
+        
+        const passedCount = Object.values(checkState).filter(v => v === true).length;
+        const totalCount = Object.keys(checkState).length;
+        const allPassed = passedCount === totalCount;
+
+        groups.forEach(g => {
+            const expertsInGroup = experts.map(e => checkState[`${e}_${g}`]);
+            const allPass = expertsInGroup.every(v => v === true);
+            const badge = document.getElementById(`icon-group-${g}`);
+            
+            if(allPass) {
+                badge.innerText = "✔";
+                badge.className = "tab-status st-pass ms-2";
+            } else {
+                badge.innerText = "Wait";
+                badge.className = "tab-status ms-2"; 
+            }
+        });
+
+        if (allPassed) {
+            btn.disabled = false;
+            msg.className = "text-success fw-bold small";
+            msg.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> ข้อมูลครบถ้วน พร้อมคำนวณ`;
+        } else {
+            btn.disabled = true;
+            msg.className = "text-danger fw-bold small";
+            msg.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i> ยังไม่พร้อมคำนวณ (ผ่าน ${passedCount}/${totalCount})`;
+        }
+    }
+
+    function clearAllData() {
+        if(!confirm("ต้องการล้างค่าข้อมูลทั้งหมดใช่หรือไม่?")) return;
+        document.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
+        document.querySelectorAll('.table-danger').forEach(row => row.classList.remove('table-danger'));
+        experts.forEach(e => {
+            groups.forEach(g => {
+                const div = document.getElementById(`result_${e}_${g}`);
+                if(div) div.innerHTML = '';
+                checkState[`${e}_${g}`] = false;
+            });
+        });
+        updateSubmitButton();
+    }
+
+    async function checkCRI(expertId, criteriaList, groupId) {
+        const resultDiv = document.getElementById(`result_${expertId}_${groupId}`);
+        const BO_raw = [], OW_raw = [];
+        let worst_idx = -1, best_idx = -1;
+
+        criteriaList.forEach(c => {
+            const el = document.getElementById(`${expertId}_${c}_BO_l`);
+            if(el) el.closest('tr').classList.remove('table-danger');
+        });
+
+        try {
+            criteriaList.forEach((c, i) => {
+                const bo_l = parseFloat(document.getElementById(`${expertId}_${c}_BO_l`).value);
+                const bo_m = parseFloat(document.getElementById(`${expertId}_${c}_BO_m`).value);
+                const bo_u = parseFloat(document.getElementById(`${expertId}_${c}_BO_u`).value);
+                const ow_l = parseFloat(document.getElementById(`${expertId}_${c}_OW_l`).value);
+                const ow_m = parseFloat(document.getElementById(`${expertId}_${c}_OW_m`).value);
+                const ow_u = parseFloat(document.getElementById(`${expertId}_${c}_OW_u`).value);
+
+                if (isNaN(bo_l) || isNaN(bo_m) || isNaN(bo_u) || isNaN(ow_l) || isNaN(ow_m) || isNaN(ow_u)) {
+                    throw new Error("Incomplete");
+                }
+                
+                // ตรวจสอบความถูกต้องของ TFN (l <= m <= u)
+                if (bo_l > bo_m || bo_m > bo_u || ow_l > ow_m || ow_m > ow_u) {
+                    throw new Error("TFN Invalid");
+                }
+
+                BO_raw.push([bo_l, bo_m, bo_u]);
+                OW_raw.push([ow_l, ow_m, ow_u]);
+                
+                // ตรวจสอบ Best (1,1,1)
+                if (bo_l === 1 && bo_m === 1 && bo_u === 1) best_idx = i;
+                // ตรวจสอบ Worst (1,1,1)
+                if (ow_l === 1 && ow_m === 1 && ow_u === 1) worst_idx = i;
+            });
+
+            if (best_idx === -1 || worst_idx === -1) {
+                alert("ต้องมีเกณฑ์ที่ดีที่สุด (Best, BO=1,1,1) และเกณฑ์ที่แย่ที่สุด (Worst, OW=1,1,1) อย่างละ 1 เกณฑ์ในกลุ่ม");
+                checkState[`${expertId}_${groupId}`] = false;
+                updateSubmitButton(); return;
+            }
+            if (best_idx !== -1 && worst_idx !== -1 && best_idx === worst_idx) {
+                alert("เกณฑ์ที่ดีที่สุด (Best) และเกณฑ์ที่แย่ที่สุด (Worst) ต้องไม่ใช่เกณฑ์เดียวกัน!");
+                checkState[`${expertId}_${groupId}`] = false;
+                updateSubmitButton(); return;
+            }
+
+            resultDiv.innerHTML = `<div class="spinner-border spinner-border-sm text-secondary"></div>`;
+            
+            const response = await fetch('/api/check_cri', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ BO_raw, OW_raw, worst_idx })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                if (data.cri_details) {
+                    data.cri_details.forEach((val, index) => {
+                        if (val > data.threshold) {
+                            const cName = criteriaList[index];
+                            const el = document.getElementById(`${expertId}_${cName}_BO_l`);
+                            if(el) el.closest('tr').classList.add('table-danger');
+                        }
+                    });
+                }
+
+                if (data.passed) {
+                    resultDiv.innerHTML = `<span class="badge bg-success">Pass (${data.max_cri.toFixed(4)})</span>`;
+                    checkState[`${expertId}_${groupId}`] = true;
+                } else {
+                    resultDiv.innerHTML = `<span class="badge bg-danger">Fail (${data.max_cri.toFixed(4)})</span>`;
+                    checkState[`${expertId}_${groupId}`] = false;
+                }
+            } else {
+                resultDiv.innerHTML = `<span class="text-danger small">Error: ${data.error}</span>`;
+                checkState[`${expertId}_${groupId}`] = false;
+            }
+        } catch (e) {
+            let errorMsg = e.message === "TFN Invalid" ? "TFN: u < m หรือ m < l" : "กรอกข้อมูลไม่ครบ";
+            resultDiv.innerHTML = `<span class="text-danger small">${errorMsg}</span>`;
+            checkState[`${expertId}_${groupId}`] = false;
+        }
+        updateSubmitButton();
+    }
+
+    // ฟังก์ชันสำหรับเติมข้อมูลทดสอบและตรวจสอบ (ไม่เปลี่ยนแปลง)
+    async function fillAllExperts() {
+        const mainData = {
+            "E1": { "BO": ["3,5,7", "1,1,1", "7,9,9", "1,3,5", "1,3,5"], "OW": ["3,5,7", "7,9,9", "1,1,1", "1,3,5", "3,5,7"] },
+            "E2": { "BO": ["1,1,3", "1,1,1", "5,7,9", "1,3,5", "1,1,3"], "OW": ["3,5,7", "5,7,9", "1,1,1", "3,5,7", "3,5,7"] },
+            "E3": { "BO": ["1,1,3", "1,1,1", "7,9,9", "3,5,7", "1,3,5"], "OW": ["5,7,9", "7,9,9", "1,1,1", "3,5,7", "3,5,7"] }
+        };
+        await fillAndCheckGroup("Main", ["C1","C2","C3","C4","C5"], mainData);
+
+        const c1Data = {
+            "E1": { "BO": ["1,3,5", "1,1,1", "7,9,9"], "OW": ["3,5,7", "7,9,9", "1,1,1"] }, 
+            "E2": { "BO": ["1,1,1", "1,1,3", "5,7,9"], "OW": ["5,7,9", "5,7,9", "1,1,1"] },
+            "E3": { "BO": ["5,7,9", "1,1,1", "1,1,3"], "OW": ["1,1,1", "5,7,9", "5,7,9"] }
+        };
+        await fillAndCheckGroup("C1", ["s11","s12","s13"], c1Data);
+
+        const c2Data = {
+            "E1": { "BO": ["5,7,9","3,5,7","7,9,9","1,1,1"], "OW": ["1,1,3","1,3,5","1,1,1","7,9,9"] },
+            "E2": { "BO": ["3,5,7","1,1,3","7,9,9","1,1,1"], "OW": ["1,3,5","5,7,9","1,1,1","7,9,9"] },
+            "E3": { "BO": ["3,5,7","1,1,1","5,7,9","1,3,5"], "OW": ["1,3,5","5,7,9","1,1,1","3,5,7"] }
+        };
+        await fillAndCheckGroup("C2", ["s21","s22","s23","s24"], c2Data);
+
+        const c3Data = {
+            "E1": { "BO": ["1,1,1","1,3,5","3,5,7","7,9,9"], "OW": ["7,9,9","3,5,7","1,3,5","1,1,1"] },
+            "E2": { "BO": ["1,1,1","1,1,3","3,5,7","5,7,9"], "OW": ["5,7,9","3,5,7","1,3,5","1,1,1"] },
+            "E3": { "BO": ["1,1,1","1,1,3","3,5,7","5,7,9"], "OW": ["5,7,9","5,7,9","1,3,5","1,1,1"] }
+        };
+        await fillAndCheckGroup("C3", ["s31","s32","s33","s34"], c3Data);
+
+        const c4Data = {
+            "E1": { "BO": ["1,1,1","7,9,9","1,3,5"], "OW": ["7,9,9","1,1,1","3,5,7"] },
+            "E2": { "BO": ["1,1,1","7,9,9","3,5,7"], "OW": ["7,9,9","1,1,1","1,3,5"] },
+            "E3": { "BO": ["1,1,1","5,7,9","3,5,7"], "OW": ["5,7,9","1,1,1","1,1,3"] }
+        };
+        await fillAndCheckGroup("C4", ["s41","s42","s43"], c4Data);
+
+        const c5Data = {
+            "E1": { "BO": ["1,3,5","1,1,1","5,7,9"], "OW": ["1,3,5","5,7,9","1,1,1"] },
+            "E2": { "BO": ["1,3,5","1,1,1","7,9,9"], "OW": ["3,5,7","7,9,9","1,1,1"] },
+            "E3": { "BO": ["1,1,3","1,1,1","5,7,9"], "OW": ["3,5,7","5,7,9","1,1,1"] }
+        };
+        await fillAndCheckGroup("C5", ["s51","s52","s53"], c5Data);
+
+        alert("เติมข้อมูลทดสอบและตรวจสอบค่า CR^I เรียบร้อยแล้ว");
+    }
+
+    async function fillAndCheckGroup(groupId, criteriaList, dataSet) {
+        for (const eid of ["E1", "E2", "E3"]) {
+            if(dataSet[eid]) {
+                criteriaList.forEach((c, i) => {
+                    const bo = dataSet[eid].BO[i].split(',');
+                    const ow = dataSet[eid].OW[i].split(',');
+                    document.getElementById(`${eid}_${c}_BO_l`).value = bo[0];
+                    document.getElementById(`${eid}_${c}_BO_m`).value = bo[1];
+                    document.getElementById(`${eid}_${c}_BO_u`).value = bo[2];
+                    document.getElementById(`${eid}_${c}_OW_l`).value = ow[0];
+                    document.getElementById(`${eid}_${c}_OW_m`).value = ow[1];
+                    document.getElementById(`${eid}_${c}_OW_u`).value = ow[2];
+                });
+                await checkCRI(eid, criteriaList, groupId);
+            }
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => { 
+        updateSubmitButton(); 
+        
+        // 1. เปิดใช้งาน Popovers (สำหรับตารางเกณฑ์ย่อย s11, s12, ฯลฯ)
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl)
+        });
+
+        // 2. เปิดใช้งาน Tooltips (สำหรับปุ่ม Tabs C1, C2, ฯลฯ)
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
+{% endblock %}

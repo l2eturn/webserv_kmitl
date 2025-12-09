@@ -1,0 +1,319 @@
+{% extends "layout.html" %}
+
+{% block title %}ผลลัพธ์การจัดอันดับ{% endblock %}
+
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+    body { font-family: 'Sarabun', sans-serif; }
+
+    /* --- Theme Colors --- */
+    :root {
+        --primary-gradient: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+        --success-gradient: linear-gradient(135deg, #198754 0%, #20c997 100%);
+        --card-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    /* UI หน้าจอปกติ */
+    .screen-only { display: block; }
+    #pdf-container, #word-template { display: none; }
+
+    /* --- Modern UI Styles --- */
+    .modern-card {
+        background: white;
+        border: none;
+        border-radius: 20px;
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        margin-bottom: 30px;
+    }
+
+    /* Header */
+    .result-header {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 40px 20px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .result-header::before { content: ''; position: absolute; top: -50px; left: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.05); border-radius: 50%; }
+    .result-header::after { content: ''; position: absolute; bottom: -30px; right: -30px; width: 120px; height: 120px; background: rgba(255,255,255,0.05); border-radius: 50%; }
+
+    .header-subtitle { font-size: 1.2rem; font-weight: 500; opacity: 0.9; letter-spacing: 0.5px; margin-bottom: 15px; text-transform: uppercase; }
+    .winner-title { font-size: 3rem; font-weight: 800; margin: 0; line-height: 1.2; text-shadow: 0 2px 10px rgba(0,0,0,0.2); background: -webkit-linear-gradient(#fff, #f0f0f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .score-pill { background: rgba(255,255,255,0.2); backdrop-filter: blur(5px); padding: 6px 20px; border-radius: 50px; font-size: 1rem; font-weight: 500; border: 1px solid rgba(255,255,255,0.3); display: inline-block; margin-top: 15px; }
+
+    /* Ranking Table */
+    .rank-item { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #f0f0f0; transition: 0.2s; }
+    .rank-item:last-child { border-bottom: none; }
+    .rank-item:hover { background-color: #f9f9f9; }
+    .rank-number { width: 35px; height: 35px; background: #e9ecef; color: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; margin-right: 15px; font-size: 0.9rem; }
+    .rank-1 { background: #ffc107; color: white; }
+    .rank-2 { background: #adb5bd; color: white; }
+    .rank-3 { background: #d39e00; color: white; opacity: 0.7; }
+    .rank-info { flex-grow: 1; }
+    .rank-name { font-weight: 700; font-size: 1.1rem; color: #333; margin-bottom: 2px; }
+    .rank-score { font-size: 0.85rem; color: #6c757d; font-family: monospace; }
+    .rank-bar-container { width: 30%; margin-left: 20px; }
+    .progress-modern { height: 8px; border-radius: 4px; background-color: #e9ecef; overflow: hidden; }
+    .progress-bar-modern { height: 100%; border-radius: 4px; background: var(--success-gradient); }
+
+    /* Buttons */
+    .btn-action { border-radius: 50px; padding: 10px 25px; font-weight: 600; border: none; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .btn-pdf { background: #dc3545; color: white; } .btn-pdf:hover { background: #c82333; transform: translateY(-2px); }
+    .btn-word { background: #0d6efd; color: white; } .btn-word:hover { background: #0b5ed7; transform: translateY(-2px); }
+    .btn-nav { border: 1px solid #dee2e6; background: white; color: #555; } .btn-nav:hover { background: #f8f9fa; color: #000; }
+
+    /* --- PDF Styles (ส่วนที่แก้ไขปัญหาการจัดหน้า) --- */
+    #pdf-content { 
+        width: 210mm; 
+        background: white; 
+        /* แก้ไข: ลด padding ด้านบน/ล่างจาก 20mm เหลือ 15mm เพื่อเพิ่มพื้นที่ตาราง */
+        padding: 15mm 20mm 15mm 20mm; 
+        box-sizing: border-box; 
+        color: #000; 
+        font-size: 14px; 
+        line-height: 1.5; 
+    }
+    .report-header { 
+        text-align: center; 
+        /* แก้ไข: ลด margin-bottom จาก 30px เป็น 15px */
+        margin-bottom: 15px; 
+        border-bottom: 2px solid #000; 
+        padding-bottom: 15px; 
+    }
+    .report-section-title { font-weight: bold; font-size: 16px; margin-top: 20px; margin-bottom: 10px; border-left: 5px solid #000; padding-left: 10px; }
+    .table-official { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+    .table-official th, .table-official td { border: 1px solid #000; padding: 8px; vertical-align: middle; }
+    .table-official thead th { background-color: #f0f0f0; text-align: center; font-weight: bold; }
+    .table-official tr { page-break-inside: avoid; }
+    .no-break-block { page-break-inside: avoid; }
+    .new-page-section { 
+        page-break-before: always; 
+        /* แก้ไข: ลด padding-top จาก 30px เหลือ 0 */
+        padding-top: 0; 
+        display: block; 
+    }
+    .page-number-text { text-align: right; color: #777; font-size: 12px; margin: 0; padding-bottom: 5px; }
+</style>
+
+<div class="row justify-content-center screen-only">
+    <div class="col-lg-8 mx-auto">
+        <div class="modern-card">
+            <div class="result-header">
+                <div class="header-subtitle"><i class="bi bi-bar-chart-line-fill me-1"></i> ผลการตัดสินใจ (Final Result)</div>
+                <div class="mb-2"><i class="bi bi-trophy-fill" style="font-size: 3rem; color: #ffc107;"></i></div>
+                <h1 class="winner-title">The Winner: {{ results[0].mode }}</h1>
+                <div class="score-pill">Score: {{ "%.4f"|format(results[0].score) }}</div>
+            </div>
+            <div class="card-body p-4">
+                <h5 class="fw-bold text-secondary mb-4 ps-2 border-start border-4 border-primary">&nbsp;รายละเอียดลำดับคะแนน (Ranking)</h5>
+                <div class="card border-0 shadow-sm mb-5">
+                    {% for r in results %}
+                    <div class="rank-item">
+                        <div class="rank-number rank-{{ loop.index }}">{{ loop.index }}</div>
+                        <div class="rank-info"><div class="rank-name">{{ r.mode }}</div><div class="rank-score">Score: {{ "%.6f"|format(r.score) }}</div></div>
+                        <div class="rank-bar-container"><div class="progress-modern"><div class="progress-bar-modern" style="width: {{ r.score * 100 }}%"></div></div></div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center">
+                    <div class="mb-3 d-flex justify-content-center gap-2">
+                        <button onclick="generatePDF()" id="btn-pdf" class="btn btn-action btn-pdf"><i class="bi bi-file-earmark-pdf-fill me-1"></i> PDF</button>
+                        <button onclick="exportWord()" id="btn-word" class="btn btn-action btn-word"><i class="bi bi-file-earmark-word-fill me-1"></i> Word</button>
+                    </div>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{{ url_for('input_form') }}" class="btn btn-action btn-nav rounded-pill"><i class="bi bi-arrow-counterclockwise"></i> คำนวณใหม่</a>
+                        <a href="{{ url_for('project_select') }}" class="btn btn-action btn-nav rounded-pill"><i class="bi bi-house-door-fill"></i> หน้าแรก</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="pdf-container">
+    <div id="pdf-content">
+        <div class="report-header">
+            <h2 style="font-weight: bold; margin: 0; font-size: 22px;">รายงานสรุปผลการตัดสินใจ (Decision Report)</h2>
+            <h3 style="font-weight: normal; margin: 5px 0 0 0; font-size: 16px;">โครงการ: {{ project_name }}</h3>
+            <p style="margin: 5px 0 0 0; font-size: 12px; color: #555;">วันที่พิมพ์รายงาน: {{ print_date }}</p>
+        </div>
+        <div class="no-break-block" style="margin-bottom: 30px;">
+            <p style="margin-bottom: 10px;">ผลลัพธ์ปรากฏว่าทางเลือกที่เหมาะสมที่สุดคือ:</p>
+            <div style="border: 2px solid #000000ff; padding: 15px; text-align: center; background-color: #ffffffff;">
+                <h1 style="margin: 0; font-size: 32px; color: #000000ff;">{{ results[0].mode }}</h1>
+                <p style="margin: 5px 0 0 0; font-size: 14px;">คะแนนประเมิน (Score): <strong>{{ "%.4f"|format(results[0].score) }}</strong></p>
+            </div>
+        </div>
+        <div class="report-section-title">1. สรุปผลการจัดลำดับคะแนน (Ranking Result)</div>
+        <table class="table-official">
+            <colgroup><col style="width: 15%"><col style="width: 45%"><col style="width: 40%"></colgroup>
+            <thead><tr><th>ลำดับ</th><th>ทางเลือก (Alternative)</th><th>ค่าสัมประสิทธิ์ความใกล้ชิด (Ci)</th></tr></thead>
+            <tbody>
+                {% for r in results %}
+                <tr><td style="text-align: center;">{{ loop.index }}</td><td style="font-weight: bold;">{{ r.mode }}</td><td style="text-align: center;">{{ "%.6f"|format(r.score) }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="new-page-section">
+            <p class="page-number-text">หน้าที่ 2</p>
+            <div class="report-section-title" style="margin-top: 0;">2. รายละเอียดค่าน้ำหนักปัจจัย (Criteria Weights)</div>
+            <table class="table-official">
+                <colgroup><col style="width: 60%"><col style="width: 20%"><col style="width: 20%"></colgroup>
+                <thead><tr><th>กลุ่มปัจจัย / ปัจจัยย่อย</th><th>รหัส</th><th>น้ำหนัก</th></tr></thead>
+                <tbody>
+                    {% for group in ranking_data %}
+                    <tr style="background-color: #f9f9f9;"><td colspan="3" style="font-weight: bold;">{{ group.title }}</td></tr>
+                    {% for item in group.members %}
+                    <tr><td style="padding-left: 20px;">{{ item.name }}</td><td style="text-align: center;">{{ item.code }}</td><td style="text-align: center;">{{ "%.4f"|format(item.score) }}</td></tr>
+                    {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="new-page-section">
+            <p class="page-number-text">หน้าที่ 3</p>
+            <div class="report-section-title" style="margin-top: 0;">3. ข้อมูลนำเข้า (Input Data)</div>
+            <table class="table-official">
+                <thead><tr><th style="text-align: left;">ปัจจัย (Criteria)</th>{% for m in modes %}<th>{{ m }}</th>{% endfor %}</tr></thead>
+                <tbody>
+                    {% for c in criteria %}
+                    <tr><td><b>{{ c }}</b> : {{ criteria_names.get(c, '') }}</td><td style="text-align: center;">{{ user_matrix[0][loop.index0] }}</td><td style="text-align: center;">{{ user_matrix[1][loop.index0] }}</td><td style="text-align: center;">{{ user_matrix[2][loop.index0] }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="word-template" style="display: none;">
+    <div class="word-page">
+        <h1 align="center" style="font-size:24pt; margin-bottom:0;">รายงานสรุปผลการตัดสินใจ (Decision Report)</h1>
+        <h2 align="center" style="font-size:18pt; margin-top:0; font-weight:normal;">โครงการ: {{ project_name }}</h2>
+        <p align="center" style="font-size:14pt; color:#555;">วันที่พิมพ์รายงาน: {{ print_date }}</p>
+        <br>
+        <p style="font-size:16pt;">ผลลัพธ์ปรากฏว่าทางเลือกที่เหมาะสมที่สุดคือ:</p>
+        <div style="border: 1px solid #000; padding: 10px; text-align: center;">
+            <h1 style="font-size:28pt; color:#008000; margin:0;">{{ results[0].mode }}</h1>
+            <p style="font-size:16pt; margin:0;">คะแนนประเมิน (Score): <strong>{{ "%.4f"|format(results[0].score) }}</strong></p>
+        </div>
+        <br>
+        <h3 style="font-size:16pt; font-weight:bold;">1. สรุปผลการจัดลำดับคะแนน (Ranking Result)</h3>
+        <table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse;">
+            <thead><tr style="background-color:#f2f2f2;"><th align="center">ลำดับ</th><th align="center">ทางเลือก</th><th align="center">ค่าสัมประสิทธิ์ความใกล้ชิด (Ci)</th></tr></thead>
+            <tbody>
+                {% for r in results %}
+                <tr>
+                    <td align="center">{{ loop.index }}</td>
+                    <td align="center"><strong>{{ r.mode }}</strong></td> 
+                    <td align="center">{{ "%.6f"|format(r.score) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="word-break"></div>
+    <div class="word-page">
+        <h3 style="font-size:16pt; font-weight:bold;">2. รายละเอียดค่าน้ำหนักปัจจัย (Criteria Weights)</h3>
+        <table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse;">
+            <thead><tr style="background-color:#f2f2f2;"><th width="60%">กลุ่มปัจจัย / ปัจจัยย่อย</th><th width="20%" align="center">รหัส</th><th width="20%" align="center">น้ำหนัก</th></tr></thead>
+            <tbody>
+                {% for group in ranking_data %}
+                <tr style="background-color:#fafafa;"><td colspan="3" style="font-weight:bold; font-style:italic;">{{ group.title }}</td></tr>
+                {% for item in group.members %}
+                <tr><td style="padding-left:15px;">{{ item.name }}</td><td align="center">{{ item.code }}</td><td align="center">{{ "%.4f"|format(item.score) }}</td></tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="word-break"></div>
+    <div class="word-page">
+        <h3 style="font-size:16pt; font-weight:bold;">3. ข้อมูลนำเข้า (Input Data)</h3>
+        <table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse;">
+            <thead><tr style="background-color:#f2f2f2;"><th align="left">ปัจจัย (Criteria)</th>{% for m in modes %}<th align="center">{{ m }}</th>{% endfor %}</tr></thead>
+            <tbody>
+                {% for c in criteria %}
+                <tr><td><b>{{ c }}</b> : {{ criteria_names.get(c, '') }}</td><td align="center">{{ user_matrix[0][loop.index0] }}</td><td align="center">{{ user_matrix[1][loop.index0] }}</td><td align="center">{{ user_matrix[2][loop.index0] }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // PDF
+    function generatePDF() {
+        const element = document.getElementById('pdf-container');
+        const content = document.getElementById('pdf-content');
+        const btn = document.getElementById('btn-pdf');
+        const originalText = btn.innerHTML;
+        
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังสร้าง...';
+        btn.disabled = true;
+        element.style.display = 'block';
+
+        const opt = {
+            margin: 0,
+            filename: 'Result_{{ project_name }}.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            pagebreak: { mode: ['css', 'legacy'] },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(content).save().then(() => {
+            element.style.display = 'none';
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+
+    // Word Export (อัปเกรดฟอนต์)
+    function exportWord() {
+        const content = document.getElementById('word-template').innerHTML;
+        let htmlContent = content.replace(/<div class="word-break"><\/div>/g, 
+            "<br clear=all style='mso-special-character:line-break;page-break-before:always'>");
+
+        // ★★★ แก้ไขตรงนี้: เพิ่ม mso-bidi-font-family และบังคับฟอนต์ในทุก tag ★★★
+        const wordCSS = `
+            <style>
+                @page { size: A4; margin: 2.54cm; mso-page-orientation: portrait; }
+                body { 
+                    font-family: 'TH SarabunPSK', sans-serif; 
+                    mso-ascii-font-family: 'TH SarabunPSK';
+                    mso-hansi-font-family: 'TH SarabunPSK';
+                    mso-bidi-font-family: 'TH SarabunPSK';
+                    font-size: 16pt; color: #000; 
+                }
+                table { border-collapse: collapse; width: 100%; margin-bottom: 15pt; }
+                td, th { 
+                    border: 1px solid black; padding: 4pt; 
+                    font-family: 'TH SarabunPSK', sans-serif; /* บังคับในตารางด้วย */
+                }
+                h1 { font-size: 24pt; margin: 10pt 0; text-align: center; font-family: 'TH SarabunPSK', sans-serif; }
+                h2 { font-size: 18pt; margin: 0; text-align: center; font-weight: normal; font-family: 'TH SarabunPSK', sans-serif; }
+                h3 { font-size: 16pt; font-weight: bold; margin-bottom: 5pt; font-family: 'TH SarabunPSK', sans-serif; }
+                p { font-size: 16pt; margin: 5pt 0; font-family: 'TH SarabunPSK', sans-serif; }
+                .text-center { text-align: center; }
+            </style>
+        `;
+
+        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export Word</title>" + wordCSS + "</head><body>";
+        const footer = "</body></html>";
+        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(header + htmlContent + footer);
+        
+        const link = document.createElement("a");
+        link.href = source;
+        link.download = 'Result_{{ project_name }}.doc';
+        link.click();
+    }
+</script>
+{% endblock %}

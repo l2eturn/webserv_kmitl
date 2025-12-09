@@ -1,0 +1,240 @@
+{% extends "layout.html" %}
+
+{% block title %}ลำดับความสำคัญเกณฑ์{% endblock %}
+
+{% block content %}
+
+<style>
+    /* การ์ดสไตล์ Modern */
+    .modern-card {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        overflow: hidden;
+        height: 100%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background: white;
+    }
+
+    .modern-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    }
+
+    /* Header ของการ์ด */
+    .card-header-custom {
+        padding: 15px 20px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 0.5px;
+    }
+
+    /* Main Criteria: สีน้ำเงินไล่เฉด */
+    .header-main { 
+        background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%); 
+    }
+    
+    /* Sub Criteria: สีฟ้าอมเขียว */
+    .header-sub { 
+        background: linear-gradient(135deg, #006064 0%, #0097a7 100%); 
+    }
+
+    /* ส่วนแสดงลำดับแบบ Box */
+    .ranking-box {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-weight: 600;
+        color: #495057;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* ตาราง */
+    .custom-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+    }
+    .custom-table tr {
+        background-color: white;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        transition: 0.2s;
+    }
+    .custom-table tr:hover {
+        transform: scale(1.01);
+    }
+    .custom-table td {
+        padding: 12px 15px;
+        border-top: 1px solid #f0f0f0;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: middle;
+    }
+    .custom-table tr td:first-child {
+        border-left: 1px solid #f0f0f0;
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
+        color: #888;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    .custom-table tr td:last-child {
+        border-right: 1px solid #f0f0f0;
+        border-top-right-radius: 10px;
+        border-bottom-right-radius: 10px;
+        font-weight: bold;
+        color: #0d6efd;
+        font-family: monospace;
+        font-size: 1.1rem;
+    }
+
+    /* Ranking Items */
+    .ranking-item {
+        display: inline-flex;
+        align-items: center;
+    }
+    .code-badge-rank {
+        color: #333;
+        font-weight: 800;
+    }
+    .separator-icon {
+        color: #adb5bd;
+        font-size: 0.8rem;
+        margin: 0 5px;
+    }
+
+    /* Code Badge ในตาราง */
+    .code-badge {
+        background-color: #e3f2fd;
+        color: #0d47a1;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        margin-right: 10px;
+        display: inline-block;
+        min-width: 40px;
+        text-align: center;
+    }
+
+    /* ปุ่ม Best/Worst */
+    .bw-badge {
+        font-size: 0.8rem;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-weight: 700;
+        color: white;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .bg-best { background-color: #198754; }
+    .bg-worst { background-color: #dc3545; }
+    
+    /* ปุ่ม Action */
+    .btn-action-green {
+        background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 12px 40px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+        transition: 0.3s;
+    }
+    .btn-action-green:hover {
+        background: linear-gradient(135deg, #146c43, #198754);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(25, 135, 84, 0.4);
+        color: white;
+    }
+
+    /* เส้นขีดหัวข้อ */
+    .section-divider {
+        width: 80px; height: 4px; 
+        background: linear-gradient(90deg, #1a237e, #0d6efd); 
+        margin: 15px auto; 
+        border-radius: 2px;
+    }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-lg-11">
+        
+        <div class="text-center mb-5 mt-4">
+            <h2 class="fw-bold text-dark display-6">
+                <i class="bi bi-trophy-fill text-warning me-2"></i>การจัดลำดับความสำคัญของเกณฑ์
+            </h2>
+            <p class="text-muted fs-5">ข้อมูลน้ำหนักและลำดับความสำคัญที่ใช้ในการคำนวณ</p>
+            <div class="section-divider"></div>
+        </div>
+
+        <div class="row g-4">
+            {% for group in ranking_data %}
+            <div class="col-md-6">
+                <div class="modern-card">
+                    <div class="card-header-custom {% if group.main %}header-main{% else %}header-sub{% endif %}">
+                        {% if group.main %}
+                            <i class="bi bi-layers-fill me-2"></i>
+                        {% else %}
+                            <i class="bi bi-list-ul me-2"></i>
+                        {% endif %}
+                        {{ group.title }}
+                    </div>
+
+                    <div class="p-4">
+                        <div class="ranking-box">
+                            {% for item in group.members %}
+                                <div class="ranking-item">
+                                    <span class="code-badge-rank">{{ item.code }}</span>
+                                    {% if not loop.last %} 
+                                        <i class="bi bi-chevron-right separator-icon"></i>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <table class="custom-table">
+                            <tbody>
+                                {% for item in group.members %}
+                                <tr>
+                                    <td width="10%">#{{ loop.index }}</td>
+                                    <td>
+                                        <span class="code-badge">{{ item.code }}</span>
+                                        {{ item.name }}
+                                    </td>
+                                    <td class="text-end">{{ "%.4f"|format(item.score) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bg-white text-center pb-4 pt-3 border-top mx-4 mt-2">
+                        <span class="bw-badge bg-best me-2">Best: {{ group.members[0].code }}</span>
+                        <span class="bw-badge bg-worst">Worst: {{ group.members[-1].code }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="text-center mt-5 mb-5">
+             <a href="/form" class="btn btn-action-green">
+                <i class="bi bi-calculator me-2"></i> ไปที่หน้าคำนวณ
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
