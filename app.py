@@ -229,6 +229,37 @@ def input_form():
     return render_template('input_form.html', criteria=criteria, names=criteria_names, units=criteria_units)
 
 
+#@app.route('/calculate', methods=['POST'])
+#def calculate():
+#    criteria = session.get('current_criteria')
+#    weights = session.get('current_weights')
+#    if not criteria or not weights: return redirect(url_for('project_select')) 
+    
+#    modes = ["Air", "Sea", "Road"]
+#    user_matrix = []
+#    try:
+#        for mode in modes:
+#            row = []
+#            for c in criteria:
+#                val = request.form.get(f"{mode}_{c}")
+#                if val is None: raise ValueError(f"Missing input for {mode}_{c}")
+#                row.append(float(val))
+#            user_matrix.append(row)
+        
+#        results = calculate_topsis(user_matrix, weights, criteria)
+        
+#        db_path = session.get('current_project_db')
+#        ranking_data = []
+#        if db_path and os.path.exists(db_path): ranking_data = get_ranked_criteria(db_path)
+        
+#        project_name = session.get('current_project_name', 'รายงานผลการตัดสินใจ') 
+#        print_date = datetime.now().strftime("%d/%m/%Y %H:%M")
+        
+#        criteria_names = CRITERIA_INFO['names']
+#        criteria_units = CRITERIA_INFO['units']
+
+#        return render_template('result.html', results=results, ranking_data=ranking_data, user_matrix=user_matrix, criteria=criteria, criteria_names=criteria_names, criteria_units=criteria_units, modes=modes, project_name=project_name, print_date=print_date,matrix=matrix,criteria_list=criteria_names)
+#    except Exception as e: return f"Error in TOPSIS calculation: {e}", 400
 @app.route('/calculate', methods=['POST'])
 def calculate():
     criteria = session.get('current_criteria')
@@ -237,7 +268,9 @@ def calculate():
     
     modes = ["Air", "Sea", "Road"]
     user_matrix = []
+    
     try:
+        # 1. ดึงข้อมูลจากฟอร์ม
         for mode in modes:
             row = []
             for c in criteria:
@@ -246,8 +279,10 @@ def calculate():
                 row.append(float(val))
             user_matrix.append(row)
         
+        # 2. คำนวณ TOPSIS
         results = calculate_topsis(user_matrix, weights, criteria)
         
+        # 3. เตรียมข้อมูลอื่นๆ
         db_path = session.get('current_project_db')
         ranking_data = []
         if db_path and os.path.exists(db_path): ranking_data = get_ranked_criteria(db_path)
@@ -258,9 +293,31 @@ def calculate():
         criteria_names = CRITERIA_INFO['names']
         criteria_units = CRITERIA_INFO['units']
 
-        return render_template('result.html', results=results, ranking_data=ranking_data, user_matrix=user_matrix, criteria=criteria, criteria_names=criteria_names, criteria_units=criteria_units, modes=modes, project_name=project_name, print_date=print_date)
-    except Exception as e: return f"Error in TOPSIS calculation: {e}", 400
+        # --- ส่วนที่เพิ่มเพื่อแก้ Error และทำกราฟ ---
+        # สร้างลิสต์ชื่อเกณฑ์ภาษาไทยเรียงตามลำดับสำหรับกราฟ
+        # (ถ้าส่ง criteria_names ที่เป็น dict ไปตรงๆ กราฟอาจจะงงได้)
+        chart_labels = []
+        for c in criteria:
+            name = criteria_names.get(c, c) # ดึงชื่อไทย ถ้าไม่มีใช้รหัสเดิม
+            chart_labels.append(name)
 
+        return render_template('result.html', 
+                               results=results, 
+                               ranking_data=ranking_data, 
+                               user_matrix=user_matrix, 
+                               criteria=criteria, 
+                               criteria_names=criteria_names, 
+                               criteria_units=criteria_units, 
+                               modes=modes, 
+                               project_name=project_name, 
+                               print_date=print_date,
+                               
+                               # !!! จุดที่แก้ !!!
+                               matrix=user_matrix,          # เปลี่ยนจาก matrix เป็น user_matrix
+                               criteria_list=chart_labels   # ส่งชื่อไทยไปให้กราฟ
+                               )
+                               
+    except Exception as e: return f"Error in TOPSIS calculation: {e}", 400
 @app.route('/new_project_input')
 def new_project_input():
     structure = get_full_structure()
